@@ -1,0 +1,22 @@
+{
+  "name": "webscraper",
+  "description": "",
+  "version": "0.0.1",
+  "main": "app.js",
+  "private": true,
+  "author": "mdglissmann@gmail.com",
+  "license": "",
+  "keywords": [
+    "web scraper",
+    "extract"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "jsdom": ">=5.7.0",
+    "jquery": "*",
+    "curl": "*"
+  }
+}
