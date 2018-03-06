@@ -19,46 +19,66 @@ const path = "/viewalljobs/";
 /*
  * Functions
  */
-function crawlJobCats(html) {
+function crawlJobCats(html, callback) {
   const { JSDOM } = jsdom;
   const dom = new JSDOM(html);
   const $ = jquery(dom.window);
 
-  let items = $(".searchbycat").children();
-  console.log(items.length);
+  let items = $(".searchbycat").children(); /* Need to expand the buildout of
+  this items list to include results from the pagination before entering into
+  the loop */
+  let data = [];
 
+  /* Get job listings for each category listed */
   for( let i = 0; i < items.length; i++ ) {
     let href = $(items[i]).find( ("a")[0] ).attr("href");
     href = domain + href;
-    getJobs(href);
+    getJobs(href, function(req, res) {
+      if(res === null) {
+        items.length = items.length - 1;
+      }
+      else {
+        data.push(res);
+      }
+
+      if(data.length === items.length) {
+        callback(null, data);
+      }
+    });
   }
 }
 
-function getJobDetail(url) {
+function getJobDetail(url, callback) {
   curl.get(url, null, function(err, resp, body) {
     if (err) {
-      console.log("Error fetching: " + url);
-      console.log("Error detail: " + err);
+      let error = {
+        msg: "Error getting job detail: " + url,
+        error: err
+      }
+      console.log(error.msg);
+      callback(err, null);
     }
     else {
-      parseJobDetail(body, url);
+      parseJobDetail(body, url, function(req, res) {
+        callback(null, res);
+      });
     }
   });
 }
 
-function getJobs(url) {
+function getJobs(url, callback) {
   curl.get(url, null, function(err, resp, body) {
     if (err) {
-      console.log("Error fetching: " + url);
+      console.log("Error getting jobs: " + url);
       console.log("Error detail: " + err);
     }
-    else {
-      parseJobList(body, url);
-    }
+    parseJobList(body, url, function(req, res) {
+      callback(null, res);
+    });
   });
 }
 
-function parseJobDetail(html, url) {
+function parseJobDetail(html, url, callback) {
   const { JSDOM } = jsdom;
   const dom = new JSDOM(html);
   const $ = jquery(dom.window);
@@ -76,8 +96,10 @@ function parseJobDetail(html, url) {
   obj["jobLocation"] = jobLocation;
   let hiringOrganization = $("[itemprop='hiringOrganization']").html();
   obj["hiringOrganization"] = hiringOrganization;
+  /*
   let description = $("[itemprop='description']").html();
   obj["description"] = description;
+  */
   let jobPostingId = $("u:contains('Job Description/Job Posting ID:')").html();
   obj["jobPostingId"] = jobPostingId;
   let schedule = $("u:contains('Schedule:')").parents("p").html();
@@ -109,12 +131,25 @@ function parseJobDetail(html, url) {
   let jobSegments = $("[itemprop='industry']").text();
   obj["jobSegments"] = jobSegments;
 
-  console.log(obj.title + " | " + obj.datePosted);
-  let json = JSON.stringify(obj);
+  for( let i = 0; i < Object.keys(obj).length; i++ ) {
+    let key = Object.keys(obj)[i];
+    let val = Object.values(obj)[i];
+    if( typeof val === "string") {
+      obj[key] = val.trim();
+    }
+  }
 
+  /*
+  console.log(typeof obj.jobPostingId);
+  if(typeof obj.jobPostingId === "String") {
+    obj["jobPostingId"] = "Yo Mama";
+  }
+  console.log(obj.jobPostingId);
+  */
+  callback(null, obj);
 }
 
-function parseJobList(html, url) {
+function parseJobList(html, url, callback) {
   const { JSDOM } = jsdom;
   const dom = new JSDOM(html);
   const $ = jquery(dom.window);
@@ -127,24 +162,30 @@ function parseJobList(html, url) {
     let jobURL = $(jobs[i]).find(".jobTitle-link").attr("href");
     jobURL = domain + jobURL;
 
-    getJobDetail(jobURL);
+    getJobDetail(jobURL, function(req, res) {
+      callback(null, res);
+    });
   }
-
 }
 
 module.exports = {
   config: {
     url: domain + path
   },
-  crawlJobs: function (url) {
+  crawlJobs: function(url, callback) {
     curl.get(url, null, function(err, resp, body) {
       if (err) {
-        console.log("Error fetching: " + url);
-        console.log("Error detail: " + err);
+        let error = {
+					msg: "Error fetching root URL: " + url,
+					error: err
+				}
+        console.log(error.msg);
+				callback(error, null);
+				return;
       }
-      else {
-         crawlJobCats(body);
-      }
+      crawlJobCats(body, function(req, res) {
+        callback(null, res);
+      });
     });
   }
 }
