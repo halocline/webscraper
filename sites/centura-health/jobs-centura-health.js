@@ -19,20 +19,27 @@ const path = "/viewalljobs/";
 /*
  * Functions
  */
-function crawlJobCats(html, callback) {
+function crawlJobCats(html, url, callback) {
   const { JSDOM } = jsdom;
   const dom = new JSDOM(html);
   const $ = jquery(dom.window);
+
+  const numberResults = $(".paginationLabel").children("b").last().text();
+  const resultsPerPage = 50;
+  let resultsPages = getPaginatedResults(url, numberResults, resultsPerPage);
+  console.log(resultsPages);
 
   let items = $(".searchbycat").children(); /* Need to expand the buildout of
   this items list to include results from the pagination before entering into
   the loop */
   let data = [];
+  console.log(items);
 
   /* Get job listings for each category listed */
   for( let i = 0; i < items.length; i++ ) {
     let href = $(items[i]).find( ("a")[0] ).attr("href");
     href = domain + href;
+    /*
     getJobs(href, function(req, res) {
       if(res === null) {
         items.length = items.length - 1;
@@ -44,7 +51,7 @@ function crawlJobCats(html, callback) {
       if(data.length === items.length) {
         callback(null, data);
       }
-    });
+    });*/
   }
 }
 
@@ -76,6 +83,18 @@ function getJobs(url, callback) {
       callback(null, res);
     });
   });
+}
+
+function getPaginatedResults(rootURL, numResults, resPerPage, callback) {
+  let pages = [rootURL];
+  let numPages = Math.ceil( numResults / resPerPage );
+  console.log("Number of results pages: " + numPages);
+  for( let i = 1; i < numPages; i++ ) {
+    let pageURL = rootURL + (resPerPage * i)
+    pages.push(pageURL);
+  }
+  console.log("These are the page results we need to crawl: \n" + pages);
+  return pages;
 }
 
 function parseJobDetail(html, url, callback) {
@@ -183,7 +202,7 @@ module.exports = {
 				callback(error, null);
 				return;
       }
-      crawlJobCats(body, function(req, res) {
+      crawlJobCats(body, url, function(req, res) {
         callback(null, res);
       });
     });
