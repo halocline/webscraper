@@ -5,6 +5,7 @@
 const crawl = require('./crawl').api
 const fs = require('fs')
 const c3 = require('./sites/centura-health/jobs-centura-health_v0.3')
+//const c3 = require('./sites/centura-health/jobs-centura-health')
 
 const centuraUrl = c3.config.url
 
@@ -111,7 +112,7 @@ const getCenturaJobCategoryUrls = () => {
   })
 }
 
-const getJobsCategoryListHtml = (urls) => {
+const getHtmlPages = (urls) => {
   return new Promise( (resolve, reject) => {
     let pages = []
     for ( let i = 0; i < urls.length; i++ ) {
@@ -175,12 +176,12 @@ const getCenturaJobPostingUrls = (urls = [
   'https://careers.centura.org/go/Physician-Clinic/372815/'
 ]) => {
   return new Promise( (resolve, reject) => {
-    getJobsCategoryListHtml(urls)
+    getHtmlPages(urls)
     .then( pages => {
       return getPagination(pages, urls)
     })
     .then( list => {
-      return getJobsCategoryListHtml(list)
+      return getHtmlPages(list)
     })
     .then( pages => {
       return getJobPostHrefs(pages)
@@ -188,6 +189,29 @@ const getCenturaJobPostingUrls = (urls = [
     .then(toFullPath)
     .then( hrefs => {
       resolve(hrefs);
+    })
+    .catch(failureCallback)
+  })
+}
+
+const parseJobPostDetails = (urls) => {
+  return new Promise( (resolve, reject) => {
+    getHtmlPages(urls)
+    .then( pages => {
+      let jobs = []
+      for( let i = 0; i < pages.length; i++) {
+        c3.parseJobDetail(pages[i], urls[i])
+        .then( job => {
+          jobs.push(job)
+          if(jobs.length === urls.length) {
+            resolve(jobs)
+          }
+        })
+        .catch(failureCallback)
+      }
+    })
+    .then( jobs => {
+      resolve(jobs)
     })
     .catch(failureCallback)
   })
@@ -209,11 +233,18 @@ getCenturaJobPostings()
 
 getCenturaJobCategoryUrls()
 .then( urls => {
-  urls = urls.slice(0, 60)
-  //console.log(urls);
+  urls = urls.slice(0, 1)
   return getCenturaJobPostingUrls(urls)
 })
 .then( urls => {
-  console.log(urls);
+  urls = urls.slice(0, 20)
   console.log(urls.length);
+  return parseJobPostDetails(urls)
 })
+.then( x => {
+  for( let i = 0; i < x.length; i++) {
+    console.log(x[i].title);
+  }
+  console.log(x.length);
+})
+.catch(failureCallback)

@@ -87,10 +87,77 @@ function getResultUrls(indexUrl, resultsPerPage = 10, callback) {
   });
 }
 
+const parseJobDetail = (html, url) => {
+  return new Promise( (resolve, reject) => {
+    const { JSDOM } = jsdom;
+    const dom = new JSDOM(html);
+    const $ = jquery(dom.window);
+
+    let obj = {};
+
+    obj["url"] = url;
+    let dateLastCrawled = Date.now();
+    obj["dateLastCrawled"] = dateLastCrawled;
+    let title = $("[itemprop='title']").html();
+    obj["title"] = title;
+    let datePosted = $("[itemprop='datePosted']").html();
+    obj["datePosted"] = datePosted;
+    let jobLocation = $("[itemprop='jobLocation']").html();
+    obj["jobLocation"] = jobLocation;
+    let hiringOrganization = $("[itemprop='hiringOrganization']").html();
+    obj["hiringOrganization"] = hiringOrganization;
+    /*
+    let description = $("[itemprop='description']").html();
+    obj["description"] = description;
+    */
+    let jobPostingId = $("u:contains('Job Description/Job Posting ID:')").html();
+    obj["jobPostingId"] = jobPostingId;
+    let schedule = $("u:contains('Schedule:')").parents("p").html();
+    obj["schedule"] = schedule;
+    let shift = $("u:contains('Shift:')").parents("p").html();
+    obj["shift"] = shift;
+    let positionSummary = $("u:contains('Position Summary')").parents("p").nextAll("p").html();
+    obj["positionSummary"] = positionSummary;
+    let minEducation = [];
+    $("u:contains('Minimum Education Requirements')").parents("p").nextAll("ul")
+    .first().children("li").each( function(index) {
+        minEducation.push($( this ).text());
+    });
+    obj["minEducation"] = minEducation;
+    let minExperience = [];
+    $("u:contains('Minimum Experience Requirements')").parents("p").nextAll("ul")
+    .first().children("li").each( function(index) {
+        minExperience.push($( this ).text());
+    });
+    obj["minExperience"] = minExperience;
+    let positionDuties = [];
+    $("u:contains('Postion Duties')").parents("p").nextAll("ul")
+    .first().children("li").each( function(index) {
+        positionDuties.push($( this ).text());
+    });
+    obj["positionDuties"] = positionDuties;
+    let majorMarkets = $(".jobmarkets").text();
+    obj["majorMarkets"] = majorMarkets;
+    let jobSegments = $("[itemprop='industry']").text();
+    obj["jobSegments"] = jobSegments;
+
+    for( let i = 0; i < Object.keys(obj).length; i++ ) {
+      let key = Object.keys(obj)[i];
+      let val = Object.values(obj)[i];
+      if( typeof val === "string") {
+        obj[key] = val.trim();
+      }
+    }
+
+    resolve(obj)
+  })
+}
+
 module.exports = {
   config: {
     url: domain + path,
     saveDestination: './sites/centura-health/data-out/'
   },
-  getJobPosts: getJobPosts
+  getJobPosts: getJobPosts,
+  parseJobDetail: parseJobDetail
 }
