@@ -233,7 +233,7 @@ getCenturaJobPostings()
 
 getCenturaJobCategoryUrls()
 .then( urls => {
-  urls = urls.slice(0, 1)
+  urls = urls.slice(0, 2)
   return getCenturaJobPostingUrls(urls)
 })
 .then( urls => {
@@ -243,7 +243,8 @@ getCenturaJobCategoryUrls()
 })
 .then( x => {
   for( let i = 0; i < x.length; i++) {
-    console.log(x[i].title);
+    //console.log(x[i].title + '||' + x[i].datePosted);
+    console.log(x[i]);
   }
   console.log(x.length);
 })
